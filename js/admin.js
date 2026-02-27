@@ -334,7 +334,7 @@
     settingsPanel.innerHTML = '<p class="loading">加载中…</p>';
     try {
       const rows = await DB.adminGetSettings();
-      settingsPanel.innerHTML = rows.map(row => renderSettingRow(row)).join('');
+      settingsPanel.innerHTML = `<div class="settings-grid">${rows.map(row => renderSettingRow(row)).join('')}</div>`;
       bindSettingActions();
     } catch (e) {
       settingsPanel.innerHTML = `<p class="empty">加载失败：${e.message}</p>`;
@@ -343,11 +343,12 @@
 
   function renderSettingRow(row) {
     const meta = SETTING_META[row.key] ?? { type: 'text', label: row.key, desc: row.description ?? '' };
-    const isBool = meta.type === 'bool';
-    const isTrue = row.value === 'true';
+    const isBool   = meta.type === 'bool';
+    const isText   = meta.type === 'text';
+    const isTrue   = row.value === 'true';
 
     return `
-    <div class="setting-row" data-key="${row.key}">
+    <div class="setting-row${isText ? ' full-width' : ''}" data-key="${row.key}">
       <div class="setting-info">
         <span class="setting-label">${meta.label}</span>
         <span class="setting-desc">${meta.desc}</span>
@@ -357,6 +358,11 @@
           <button class="toggle-btn ${isTrue ? 'on' : 'off'}" data-key="${row.key}" data-value="${row.value}">
             ${isTrue ? '开启' : '关闭'}
           </button>
+        ` : isText ? `
+          <div class="text-control">
+            <input type="text" class="setting-text" data-key="${row.key}" value="${escapeAttr(row.value)}">
+            <button class="btn-save-text" data-key="${row.key}">保存</button>
+          </div>
         ` : `
           <div class="number-control">
             <input type="number" class="setting-number" data-key="${row.key}" value="${row.value}" min="0">
@@ -384,9 +390,18 @@
     document.querySelectorAll('.btn-save-num').forEach(btn => {
       btn.addEventListener('click', async () => {
         const input = btn.closest('.number-control').querySelector('.setting-number');
-        const val = input.value;
         btn.disabled = true;
-        await DB.adminSaveSetting(btn.dataset.key, val);
+        await DB.adminSaveSetting(btn.dataset.key, input.value);
+        btn.textContent = '✓ 已保存';
+        setTimeout(() => { btn.textContent = '保存'; btn.disabled = false; }, 2000);
+      });
+    });
+
+    document.querySelectorAll('.btn-save-text').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const input = btn.closest('.text-control').querySelector('.setting-text');
+        btn.disabled = true;
+        await DB.adminSaveSetting(btn.dataset.key, input.value.trim());
         btn.textContent = '✓ 已保存';
         setTimeout(() => { btn.textContent = '保存'; btn.disabled = false; }, 2000);
       });
@@ -658,6 +673,7 @@
           <span class="msg-count">${totalCount} 条</span>
         </div>
         <div class="visitor-actions" onclick="event.stopPropagation()">
+          ${nickname ? `<span class="visitor-actions-nickname" title="访客昵称">${escapeHtml(nickname)}</span>` : ''}
           ${vid !== 'unknown' ? `
           <button class="btn-block" data-vid="${vid}" data-blocked="${isBlocked}">
             ${isBlocked ? I18n.t('admin.unblock_user') : I18n.t('admin.block_user')}
@@ -673,7 +689,7 @@
 
       ${state.open ? `
       <div class="group-detail">
-        ${bio ? `<p class="visitor-bio">${escapeHtml(bio)}</p>` : ''}
+        ${bio ? `<p class="visitor-bio">签名：${escapeHtml(bio)}</p>` : ''}
         ${vid !== 'unknown' ? `
         <div class="note-area">
           <input type="text" class="note-input" data-vid="${vid}" value="${escapeAttr(note)}"

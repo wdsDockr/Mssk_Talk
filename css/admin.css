@@ -483,32 +483,54 @@
       overflow: hidden;
     }
 
+    /* 两列网格：bool 开关 | 数字/文字输入 */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
     .setting-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 16px;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--border);
-      gap: 16px;
+      border-right: 1px solid var(--border);
+      gap: 12px;
+    }
+
+    /* 文字类型占满整行 */
+    .setting-row.full-width {
+      grid-column: 1 / -1;
+      border-right: none;
+    }
+
+    /* 每行最后一个右边框取消 */
+    .settings-grid .setting-row:nth-child(2n) {
+      border-right: none;
     }
 
     .setting-row:last-child { border-bottom: none; }
+    .setting-row.full-width:last-child { border-bottom: none; }
 
     .setting-info {
       flex: 1;
+      min-width: 0;
     }
 
     .setting-label {
       display: block;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       color: var(--text);
     }
 
     .setting-desc {
       display: block;
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       color: var(--text-secondary);
       margin-top: 2px;
+      line-height: 1.4;
     }
 
     .setting-control {
@@ -516,11 +538,11 @@
     }
 
     .toggle-btn {
-      padding: 6px 18px;
+      padding: 5px 16px;
       border-radius: 20px;
       border: none;
       cursor: pointer;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       font-family: inherit;
       font-weight: 500;
       transition: background 0.15s;
@@ -538,24 +560,42 @@
 
     .toggle-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-    .number-control {
+    .number-control, .text-control {
       display: flex;
       gap: 6px;
       align-items: center;
     }
 
     .setting-number {
-      width: 80px;
+      width: 72px;
       padding: 5px 8px;
       border: 1px solid var(--border);
       border-radius: 4px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       font-family: inherit;
       outline: none;
       text-align: center;
+      background: var(--bg);
+      color: var(--text);
     }
 
-    .btn-save-num {
+    .setting-text {
+      width: 200px;
+      padding: 5px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.88rem;
+      font-family: inherit;
+      outline: none;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .setting-text:focus, .setting-number:focus {
+      border-color: var(--accent);
+    }
+
+    .btn-save-num, .btn-save-text {
       padding: 5px 12px;
       border: 1px solid var(--border);
       border-radius: 4px;
@@ -564,6 +604,12 @@
       cursor: pointer;
       font-family: inherit;
       color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .btn-save-num:hover, .btn-save-text:hover {
+      border-color: var(--accent);
+      color: var(--accent);
     }
 
     /* 回复区域 */
@@ -1236,6 +1282,18 @@
 
 .visitor-nickname {
   color: var(--accent);
+}
+
+.visitor-actions-nickname {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  background: var(--accent-light);
+  border-radius: 10px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .visitor-bio {

@@ -422,11 +422,13 @@
       .card { padding: 24px 20px; }
     }
 
-/* 名片 */
-.card-section {
-  margin-top: 20px;
-  border-top: 1px solid var(--border);
-  padding-top: 16px;
+/* 名片面板（独立卡片） */
+.card-panel {
+  padding: 16px 32px;
+}
+
+@media (max-width: 600px) {
+  .card-panel { padding: 14px 20px; }
 }
 
 .card-section-toggle {

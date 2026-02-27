@@ -267,7 +267,7 @@
     if (avatarUrl) { avatarEl.src = avatarUrl; avatarEl.style.display = 'block'; }
     else avatarEl.style.display = 'none';
     nickEl.textContent = nickname || '';
-    bioEl.textContent  = bio || '';
+    bioEl.textContent  = bio ? `签名：${bio}` : '';
   }
 
   const cardToggle  = document.getElementById('card-toggle');
