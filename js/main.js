@@ -11,6 +11,13 @@
 
   const S = CONFIG.settings; // 简写
 
+  // 更新页面标题和描述（从 settings 读取）
+  const titleEl = document.querySelector('h1[data-i18n="site.title"]');
+  const descEl  = document.querySelector('p[data-i18n="site.description"]');
+  if (titleEl) titleEl.textContent = S.siteTitle;
+  if (descEl)  descEl.textContent  = S.siteDescription;
+  document.title = S.siteTitle;
+
   // 初始化语言
   const savedLang = localStorage.getItem(CONFIG.storage.lang) || CONFIG.defaultLang;
   await I18n.load(savedLang);
@@ -238,6 +245,84 @@
       historyList.innerHTML = `<p class="empty">${I18n.t('feedback.error_body')}</p>`;
     }
   }
+
+  // ── 名片 ───────────────────────────────────────────────────
+  const CARD_STORAGE = 'mssk_card';
+
+  function loadCardFromStorage() {
+    try { return JSON.parse(localStorage.getItem(CARD_STORAGE) || 'null'); } catch { return null; }
+  }
+
+  function saveCardToStorage(card) {
+    localStorage.setItem(CARD_STORAGE, JSON.stringify(card));
+  }
+
+  function updateCardPreview(nickname, avatarUrl, bio) {
+    const preview  = document.getElementById('card-preview');
+    const avatarEl = document.getElementById('card-avatar-preview');
+    const nickEl   = document.getElementById('card-nickname-preview');
+    const bioEl    = document.getElementById('card-bio-preview');
+    const hasAny   = nickname || avatarUrl || bio;
+    preview.style.display = hasAny ? 'flex' : 'none';
+    if (avatarUrl) { avatarEl.src = avatarUrl; avatarEl.style.display = 'block'; }
+    else avatarEl.style.display = 'none';
+    nickEl.textContent = nickname || '';
+    bioEl.textContent  = bio || '';
+  }
+
+  const cardToggle  = document.getElementById('card-toggle');
+  const cardForm    = document.getElementById('card-form');
+  const cardNickEl  = document.getElementById('card-nickname');
+  const cardAvatarEl = document.getElementById('card-avatar');
+  const cardBioEl   = document.getElementById('card-bio');
+  const cardSaveBtn = document.getElementById('card-save-btn');
+
+  // 从本地读取并填入表单
+  const savedCard = loadCardFromStorage();
+  if (savedCard) {
+    cardNickEl.value   = savedCard.nickname  || '';
+    cardAvatarEl.value = savedCard.avatarUrl || '';
+    cardBioEl.value    = savedCard.bio       || '';
+    updateCardPreview(savedCard.nickname, savedCard.avatarUrl, savedCard.bio);
+  }
+
+  // 头像 URL 实时预览
+  cardAvatarEl.addEventListener('input', () => {
+    updateCardPreview(cardNickEl.value, cardAvatarEl.value, cardBioEl.value);
+  });
+  cardNickEl.addEventListener('input', () => {
+    updateCardPreview(cardNickEl.value, cardAvatarEl.value, cardBioEl.value);
+  });
+  cardBioEl.addEventListener('input', () => {
+    updateCardPreview(cardNickEl.value, cardAvatarEl.value, cardBioEl.value);
+  });
+
+  cardToggle.addEventListener('click', () => {
+    const isHidden = cardForm.style.display === 'none';
+    cardForm.style.display = isHidden ? 'block' : 'none';
+    cardToggle.textContent = isHidden ? '名片 ▴' : '名片 ▾';
+  });
+
+  cardSaveBtn.addEventListener('click', async () => {
+    if (!visitorId) return;
+    cardSaveBtn.disabled = true;
+    cardSaveBtn.textContent = '保存中…';
+    const card = {
+      nickname:  cardNickEl.value.trim(),
+      avatarUrl: cardAvatarEl.value.trim(),
+      bio:       cardBioEl.value.trim(),
+    };
+    try {
+      await DB.updateCard(visitorId, card);
+      saveCardToStorage(card);
+      updateCardPreview(card.nickname, card.avatarUrl, card.bio);
+      cardSaveBtn.textContent = '✓ 已保存';
+      setTimeout(() => { cardSaveBtn.textContent = '保存名片'; cardSaveBtn.disabled = false; }, 2000);
+    } catch {
+      cardSaveBtn.textContent = '保存失败，重试';
+      cardSaveBtn.disabled = false;
+    }
+  });
 
   function escapeHtml(str = '') {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

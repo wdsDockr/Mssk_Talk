@@ -314,6 +314,8 @@
 
   // ── 设置面板 ───────────────────────────────────────────────
   const SETTING_META = {
+    site_title:          { type: 'text',   label: '留言板标题',          desc: '显示在用户端顶部的标题' },
+    site_description:    { type: 'text',   label: '留言板副标题',        desc: '标题下方的一行说明文字' },
     show_history:        { type: 'bool',   label: '显示历史记录',        desc: '用户端是否显示"查看历史记录"入口' },
     allow_messages:      { type: 'bool',   label: '允许留言',            desc: '关闭后用户无法发送新消息' },
     require_contact:     { type: 'bool',   label: '强制填写联系方式',    desc: '开启后联系方式变为必填项' },
@@ -613,22 +615,32 @@
   // ── 渲染单个用户分组（折叠/展开 + 组内分页）──────────────
   function renderVisitorGroup(vid, messages, meta) {
     const isBlocked = meta?.is_blocked ?? false;
-    const note = meta?.note ?? '';
-    const shortId = vid === 'unknown' ? 'unknown' : vid.slice(0, 8);
+    const note      = meta?.note ?? '';
+    const nickname  = meta?.nickname ?? '';
+    const avatarUrl = meta?.avatar_url ?? '';
+    const bio       = meta?.bio ?? '';
+    const shortId   = vid === 'unknown' ? 'unknown' : vid.slice(0, 8);
     const unreadCount = messages.filter(m => !m.is_read).length;
-    const totalCount = messages.length;
+    const totalCount  = messages.length;
 
-    // 初始化该组状态
     if (!groupState[vid]) groupState[vid] = { open: false, page: 1 };
     const state = groupState[vid];
 
+    // 显示名称：管理员备注 > 访客昵称 > ID
     const displayName = note
       ? `<span class="visitor-name">${highlightText(note, searchKeyword)}</span><span class="visitor-id" title="${vid}">#${shortId}</span>`
+      : nickname
+      ? `<span class="visitor-name visitor-nickname">${highlightText(nickname, searchKeyword)}</span><span class="visitor-id" title="${vid}">#${shortId}</span>`
       : `<span class="visitor-id" title="${vid}">#${shortId}</span>`;
-    const preview = messages[0];
+
+    // 头像（有头像时显示小圆形）
+    const avatarHtml = avatarUrl
+      ? `<img class="visitor-avatar" src="${escapeAttr(avatarUrl)}" alt="" onerror="this.style.display='none'">`
+      : '';
+
+    const preview     = messages[0];
     const previewText = preview?.content?.slice(0, 60) + (preview?.content?.length > 60 ? '…' : '');
 
-    // 组内分页
     const totalMsgPages = Math.ceil(totalCount / MSG_PAGE_SIZE);
     state.page = Math.min(state.page, Math.max(1, totalMsgPages));
     const pageMsgs = messages.slice((state.page - 1) * MSG_PAGE_SIZE, state.page * MSG_PAGE_SIZE);
@@ -636,9 +648,9 @@
     return `
     <div class="visitor-group ${isBlocked ? 'blocked' : ''}" data-visitor-id="${vid}">
 
-      <!-- 标题栏（可点击折叠/展开） -->
       <div class="visitor-header group-toggle" data-vid="${vid}" style="cursor:pointer">
         <div class="visitor-info">
+          ${avatarHtml}
           <span class="toggle-arrow">${state.open ? '▾' : '▸'}</span>
           ${displayName}
           ${isBlocked ? `<span class="badge blocked">${I18n.t('admin.blocked_badge')}</span>` : ''}
@@ -653,16 +665,15 @@
         </div>
       </div>
 
-      <!-- 最新一条消息作为预览（messages 已按 created_at desc 排序） -->
       ${!state.open ? `
       <div class="group-preview" data-vid="${vid}" style="cursor:pointer">
         <span class="preview-text">${highlightText(previewText, searchKeyword)}</span>
         <span class="preview-time">${formatTime(preview?.created_at)}</span>
       </div>` : ''}
 
-      <!-- 展开时显示详情 -->
       ${state.open ? `
       <div class="group-detail">
+        ${bio ? `<p class="visitor-bio">${escapeHtml(bio)}</p>` : ''}
         ${vid !== 'unknown' ? `
         <div class="note-area">
           <input type="text" class="note-input" data-vid="${vid}" value="${escapeAttr(note)}"

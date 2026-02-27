@@ -1222,3 +1222,25 @@
 }
 
 .btn-unfeature:hover { border-color: #c8a03a; color: #c8a03a; }
+
+/* 访客名片显示 */
+.visitor-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  vertical-align: middle;
+  margin-right: 2px;
+}
+
+.visitor-nickname {
+  color: var(--accent);
+}
+
+.visitor-bio {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  padding: 4px 0 8px 2px;
+  font-style: italic;
+}

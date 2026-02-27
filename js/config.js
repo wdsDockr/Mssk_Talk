@@ -23,6 +23,8 @@ const CONFIG = {
     featuredAuto: true,
     showReplies: true,
     showPinned: true,
+    siteTitle: '留言给我',
+    siteDescription: '你的消息会以匿名方式送达，联系方式完全可选。',
   },
 
   featuredBubbles: [],

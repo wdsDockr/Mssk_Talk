@@ -77,6 +77,8 @@ export async function onRequestGet(context) {
       featuredAuto,
       showReplies: settings.show_replies !== 'false',
       showPinned: settings.show_pinned !== 'false',
+      siteTitle: settings.site_title || '留言给我',
+      siteDescription: settings.site_description || '你的消息会以匿名方式送达，联系方式完全可选。',
     },
     // 精选留言气泡数据（仅内容，无隐私信息）
     featuredBubbles: showFeatured ? bubbles.map(m => ({

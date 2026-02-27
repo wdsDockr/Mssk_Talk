@@ -55,6 +55,15 @@ const DB = (() => {
     return data[0] ?? null;
   }
 
+  async function updateCard(visitorId, { nickname, avatarUrl, bio }) {
+    const res = await fetch(`/api/visitor?action=updateCard`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visitorId, nickname, avatarUrl, bio }),
+    });
+    return res.json();
+  }
+
   async function isBlocked(visitorId) {
     const data = await _get('visitors', {
       id: `eq.${visitorId}`,
@@ -190,7 +199,7 @@ const DB = (() => {
   }
 
   return {
-    createVisitor, getVisitor, isBlocked,
+    createVisitor, getVisitor, isBlocked, updateCard,
     sendMessage, getMyMessages, getReplies,
     adminGetAllMessages, adminGetStats, adminGetVisitorStats,
     adminMarkRead, adminBlockVisitor, adminBlockMessage, adminSaveNote,

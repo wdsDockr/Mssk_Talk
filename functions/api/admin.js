@@ -209,7 +209,7 @@ export async function onRequestPost(context) {
 
       case 'getMessages': {
         const params = new URLSearchParams({
-          select: '*, visitors(is_blocked, note), replies(id)',
+          select: '*, visitors(is_blocked, note, nickname, avatar_url, bio), replies(id)',
           order: 'created_at.desc',
           ...(payload?.unreadOnly ? { is_read: 'eq.false' } : {}),
           ...(payload?.showBlocked ? {} : { is_blocked: 'eq.false' }),
