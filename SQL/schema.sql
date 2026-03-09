@@ -9,7 +9,10 @@ CREATE TABLE IF NOT EXISTS visitors (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   is_blocked BOOLEAN DEFAULT FALSE,
-  note       TEXT
+  note       TEXT,
+  nickname   TEXT,
+  avatar_url TEXT,
+  bio        TEXT
 );
 
 -- ── 2. 消息表 ────────────────────────────────────────────────
@@ -21,10 +24,10 @@ CREATE TABLE IF NOT EXISTS messages (
   contact          TEXT,
   created_at       TIMESTAMPTZ DEFAULT NOW(),
   is_read          BOOLEAN DEFAULT FALSE,
-  is_blocked       BOOLEAN DEFAULT FALSE,
-  is_featured      BOOLEAN DEFAULT FALSE,
-  is_pinned        BOOLEAN DEFAULT FALSE,
-  is_word_blocked  BOOLEAN DEFAULT FALSE
+  is_blocked       BOOLEAN DEFAULT FALSE,   -- 管理员手动屏蔽
+  is_featured      BOOLEAN DEFAULT FALSE,   -- 漂浮留言墙精选
+  is_pinned        BOOLEAN DEFAULT FALSE,   -- 置顶
+  is_word_blocked  BOOLEAN DEFAULT FALSE    -- 屏蔽词自动拦截
 );
 
 -- ── 3. 系统配置表 ────────────────────────────────────────────
@@ -64,21 +67,25 @@ ALTER TABLE settings      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE replies        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE blocked_words ENABLE ROW LEVEL SECURITY;
 
+-- visitors：匿名用户可插入和读取
 CREATE POLICY "visitors_insert" ON visitors
   FOR INSERT TO anon WITH CHECK (true);
 
 CREATE POLICY "visitors_select" ON visitors
   FOR SELECT USING (true);
 
+-- messages：匿名用户可插入和读取
 CREATE POLICY "messages_insert" ON messages
   FOR INSERT TO anon WITH CHECK (true);
 
 CREATE POLICY "messages_select" ON messages
   FOR SELECT USING (true);
 
+-- settings：任何人可读（前端需要读取配置）
 CREATE POLICY "settings_select" ON settings
   FOR SELECT USING (true);
 
+-- replies：任何人可读（用户端展示回复）
 CREATE POLICY "replies_select" ON replies
   FOR SELECT USING (true);
 
@@ -86,6 +93,8 @@ CREATE POLICY "replies_select" ON replies
 
 -- ── 默认配置 ─────────────────────────────────────────────────
 INSERT INTO settings (key, value, description) VALUES
+  ('site_title',         '留言给我',                                   '留言板标题，显示在用户端顶部'),
+  ('site_description',   '你的消息会以匿名方式送达，联系方式完全可选。',  '留言板副标题'),
   ('show_history',       'false', '是否在用户端显示历史记录入口'),
   ('allow_messages',     'true',  '是否允许用户发送消息'),
   ('require_contact',    'false', '是否强制填写联系方式'),
