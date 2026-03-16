@@ -625,6 +625,40 @@
     nextBtn.disabled = cur === totalPages;
     nextBtn.addEventListener('click', () => onClick(cur + 1));
     container.appendChild(nextBtn);
+
+    // 页码跳转（超过 3 页才显示）
+    if (totalPages > 3) {
+      const jumpWrap = document.createElement('span');
+      jumpWrap.className = 'page-jump';
+
+      const jumpInput = document.createElement('input');
+      jumpInput.type = 'number';
+      jumpInput.min = 1;
+      jumpInput.max = totalPages;
+      jumpInput.placeholder = cur;
+      jumpInput.className = 'page-jump-input';
+
+      const jumpBtn = document.createElement('button');
+      jumpBtn.className = 'page-jump-btn';
+      jumpBtn.textContent = '跳转';
+
+      const doJump = () => {
+        const val = parseInt(jumpInput.value);
+        if (!isNaN(val) && val >= 1 && val <= totalPages) {
+          onClick(val);
+        } else {
+          jumpInput.value = '';
+          jumpInput.focus();
+        }
+      };
+
+      jumpBtn.addEventListener('click', doJump);
+      jumpInput.addEventListener('keydown', e => { if (e.key === 'Enter') doJump(); });
+
+      jumpWrap.appendChild(jumpInput);
+      jumpWrap.appendChild(jumpBtn);
+      container.appendChild(jumpWrap);
+    }
   }
 
   // ── 渲染单个用户分组（折叠/展开 + 组内分页）──────────────
