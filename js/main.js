@@ -75,13 +75,13 @@
   // ── 语言切换 ───────────────────────────────────────────────
   const langToggle = document.getElementById('lang-toggle');
   if (langToggle) {
-    langToggle.textContent = savedLang === 'zh' ? 'EN' : '中';
+    // 按钮显示"下一个语言"，提示用户点了会切到哪里
+    langToggle.textContent = I18n.labelOf(I18n.nextLang());
     langToggle.addEventListener('click', async () => {
-      const next = I18n.currentLang() === 'zh' ? 'en' : 'zh';
+      const next = I18n.nextLang();
       await I18n.load(next);
-      langToggle.textContent = next === 'zh' ? 'EN' : '中';
-      applySiteTitle(); // i18n 切换后重新覆盖标题
-      // 字数统计文字也要更新
+      langToggle.textContent = I18n.labelOf(I18n.nextLang());
+      applySiteTitle();
       charCount.textContent = `${textarea.value.length} / ${MAX_CHARS}`;
     });
   }
