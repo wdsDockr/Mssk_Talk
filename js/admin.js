@@ -4,11 +4,13 @@
   try {
     await CONFIG.init();
   } catch (e) {
-    document.body.innerHTML = '<p style="text-align:center;padding:40px;color:#888">服务暂时不可用。</p>';
+    document.body.innerHTML = '<p style="text-align:center;padding:40px;color:#888">Service unavailable.</p>';
     return;
   }
 
-  await I18n.load(CONFIG.defaultLang);
+  // 读取已保存的语言，和用户端保持一致
+  const savedLang = localStorage.getItem(CONFIG.storage.lang) || CONFIG.defaultLang;
+  await I18n.load(savedLang);
 
   // ── DOM 引用 ───────────────────────────────────────────────
   const loginScreen = document.getElementById('login-screen');
@@ -45,7 +47,7 @@
 
   loginBtn.addEventListener('click', async () => {
     loginBtn.disabled = true;
-    loginBtn.textContent = '验证中…';
+    loginBtn.textContent = I18n.t('admin.login_verifying');
     loginError.style.display = 'none';
     const pw = passwordInput.value;
     try {
@@ -66,7 +68,7 @@
         passwordInput.value = '';
       }
     } catch {
-      loginError.textContent = '网络错误，请重试';
+      loginError.textContent = I18n.t('admin.network_error');
       loginError.style.display = 'block';
     } finally {
       loginBtn.disabled = false;
@@ -89,7 +91,48 @@
     setTimeout(() => { loadStats(); fetchAndRender(); }, 0);
   }
 
-  // ── 过滤器 ─────────────────────────────────────────────────
+  // ── 语言菜单（管理端）─────────────────────────────────────
+  const langToggleAdmin = document.getElementById('lang-toggle-admin');
+  const langMenuAdmin   = document.getElementById('lang-menu-admin');
+
+  function renderLangMenuAdmin() {
+    langMenuAdmin.innerHTML = I18n.langs().map(({ key, label }) => `
+      <div class="lang-menu-item ${key === I18n.currentLang() ? 'active' : ''}" data-lang="${key}">
+        <span>${label}</span>
+        ${key === I18n.currentLang() ? '<span class="lang-menu-check">✓</span>' : ''}
+      </div>
+    `).join('');
+    langMenuAdmin.querySelectorAll('.lang-menu-item').forEach(item => {
+      item.addEventListener('click', async () => {
+        if (item.dataset.lang === I18n.currentLang()) { langMenuAdmin.style.display = 'none'; return; }
+        await I18n.load(item.dataset.lang);
+        langMenuAdmin.style.display = 'none';
+        // 重新渲染当前页以更新动态文字
+        renderMessages();
+      });
+    });
+  }
+
+  if (langToggleAdmin && langMenuAdmin) {
+    langToggleAdmin.addEventListener('click', e => {
+      e.stopPropagation();
+      const isHidden = langMenuAdmin.style.display === 'none';
+      if (isHidden) {
+        const rect = langToggleAdmin.getBoundingClientRect();
+        langMenuAdmin.style.display = 'block';
+        renderLangMenuAdmin();
+        const menuH = langMenuAdmin.offsetHeight;
+        langMenuAdmin.style.position = 'fixed';
+        langMenuAdmin.style.right = '16px';
+        langMenuAdmin.style.top = `${rect.bottom + 4}px`;
+        langMenuAdmin.style.left = 'auto';
+      } else {
+        langMenuAdmin.style.display = 'none';
+      }
+    });
+    document.addEventListener('click', () => { langMenuAdmin.style.display = 'none'; });
+    langMenuAdmin.addEventListener('click', e => e.stopPropagation());
+  }
   filterAll.addEventListener('click', () => {
     showUnreadOnly = false;
     filterAll.classList.add('active');
@@ -111,9 +154,9 @@
     if (showBlocked) showWordBlocked = false; // 互斥
     const btn = document.getElementById('filter-blocked');
     btn.classList.toggle('active', showBlocked);
-    btn.textContent = showBlocked ? '隐藏已屏蔽' : '显示已屏蔽';
+    btn.textContent = showBlocked ? I18n.t('admin.filter_blocked_hide') : I18n.t('admin.filter_blocked');
     document.getElementById('filter-word-blocked').classList.remove('active');
-    document.getElementById('filter-word-blocked').textContent = '屏蔽词拦截';
+    document.getElementById('filter-word-blocked').textContent = I18n.t('admin.filter_word_blocked');
     currentPage = 1;
     fetchAndRender();
   });
@@ -123,9 +166,9 @@
     if (showWordBlocked) showBlocked = false; // 互斥
     const btn = document.getElementById('filter-word-blocked');
     btn.classList.toggle('active', showWordBlocked);
-    btn.textContent = showWordBlocked ? '隐藏屏蔽词' : '屏蔽词拦截';
+    btn.textContent = showWordBlocked ? I18n.t('admin.filter_word_blocked_hide') : I18n.t('admin.filter_word_blocked');
     document.getElementById('filter-blocked').classList.remove('active');
-    document.getElementById('filter-blocked').textContent = '显示已屏蔽';
+    document.getElementById('filter-blocked').textContent = I18n.t('admin.filter_blocked');
     currentPage = 1;
     fetchAndRender();
   });
@@ -154,11 +197,11 @@
 
   async function loadFeaturedMgr() {
     const list = document.getElementById('featured-mgr-list');
-    list.innerHTML = '<p class="loading">加载中…</p>';
+    list.innerHTML = `<p class="loading">${I18n.t('admin.loading')}</p>`;
     try {
       const messages = await DB.adminGetFeaturedMessages();
       if (!messages.length) {
-        list.innerHTML = '<p class="empty" style="font-size:0.85rem;">暂无精选留言</p>';
+        list.innerHTML = `<p class="empty" style="font-size:0.85rem;">${I18n.t('admin.featured_empty')}</p>`;
         return;
       }
       list.innerHTML = messages.map(m => `
@@ -166,13 +209,13 @@
           <div class="featured-mgr-body">
             <p class="featured-mgr-content">${escapeHtml(m.content)}</p>
           </div>
-          <button class="btn-unfeature" data-msg-id="${m.id}">✨ 取消精选</button>
+          <button class="btn-unfeature" data-msg-id="${m.id}">${I18n.t('admin.featured_unfeature')}</button>
         </div>
       `).join('');
       list.querySelectorAll('.btn-unfeature').forEach(btn => {
         btn.addEventListener('click', async () => {
           btn.disabled = true;
-          btn.textContent = '取消中…';
+          btn.textContent = I18n.t('admin.featured_unfeaturing');
           await DB.adminSetFeatured(btn.dataset.msgId, false);
           // 同步更新 allMessages 中的状态
           const msg = allMessages.find(m => m.id === btn.dataset.msgId);
@@ -182,7 +225,7 @@
         });
       });
     } catch {
-      list.innerHTML = '<p class="empty">加载失败</p>';
+      list.innerHTML = `<p class="empty">${I18n.t('admin.load_fail')}</p>`;
     }
   }
 
@@ -206,20 +249,20 @@
       const words = await DB.adminGetBlockedWords();
       renderBlockedWords(words);
     } catch {
-      list.innerHTML = '<p class="empty">加载失败</p>';
+      list.innerHTML = `<p class="empty">${I18n.t('admin.load_fail')}</p>`;
     }
   }
 
   function renderBlockedWords(words) {
     const list = document.getElementById('bwords-list');
     if (!words.length) {
-      list.innerHTML = '<p class="empty" style="font-size:0.82rem;">暂无屏蔽词</p>';
+      list.innerHTML = `<p class="empty" style="font-size:0.82rem;">${I18n.t('admin.bword_empty')}</p>`;
       return;
     }
     list.innerHTML = words.map(w => `
       <span class="bword-tag">
         ${escapeHtml(w.word)}
-        <button class="bword-del" data-word-id="${w.id}" title="删除">×</button>
+        <button class="bword-del" data-word-id="${w.id}" title="×">×</button>
       </span>
     `).join('');
     list.querySelectorAll('.bword-del').forEach(btn => {
@@ -272,14 +315,14 @@
         <div class="vstats-cards">
           <div class="vstats-card">
             <div class="vstats-number">${stats.totalVisitors}</div>
-            <div class="vstats-label">总访客</div>
+            <div class="vstats-label">${I18n.t('admin.vstats_total')}</div>
           </div>
           <div class="vstats-card">
             <div class="vstats-number">${stats.todayNewVisitors}</div>
-            <div class="vstats-label">今日新增</div>
+            <div class="vstats-label">${I18n.t('admin.vstats_today')}</div>
           </div>
         </div>
-        <div class="vstats-chart-title">近 7 天消息量</div>
+        <div class="vstats-chart-title">${I18n.t('admin.vstats_chart_title')}</div>
         <div class="vstats-chart">
           ${stats.dailyMessages.map(d => {
             const pct = Math.round((d.count / max) * 100);
@@ -294,7 +337,7 @@
         </div>
       `;
     } catch (e) {
-      panel.innerHTML = `<p class="empty">加载失败：${e.message}</p>`;
+      panel.innerHTML = `<p class="empty">${I18n.t('admin.load_fail')}: ${e.message}</p>`;
     }
   }
 
@@ -313,36 +356,38 @@
   });
 
   // ── 设置面板 ───────────────────────────────────────────────
-  const SETTING_META = {
-    site_title:          { type: 'text',   label: '留言板标题',          desc: '显示在用户端顶部的标题' },
-    site_description:    { type: 'text',   label: '留言板副标题',        desc: '标题下方的一行说明文字' },
-    show_history:        { type: 'bool',   label: '显示历史记录',        desc: '用户端是否显示"查看历史记录"入口' },
-    allow_messages:      { type: 'bool',   label: '允许留言',            desc: '关闭后用户无法发送新消息' },
-    require_contact:     { type: 'bool',   label: '强制填写联系方式',    desc: '开启后联系方式变为必填项' },
-    max_message_length:  { type: 'number', label: '最大字数',            desc: '单条消息最大字符数' },
-    daily_limit:         { type: 'number', label: '每日留言上限',        desc: '同一用户每日最多发送条数，0 为不限制' },
-    show_replies:        { type: 'bool',   label: '显示管理员回复',      desc: '用户端历史记录中是否显示回复' },
-    show_pinned:         { type: 'bool',   label: '显示置顶消息',        desc: '用户端是否显示置顶消息入口' },
-    show_featured:       { type: 'bool',   label: '开启漂浮留言墙',      desc: '在用户端背景显示漂浮气泡留言' },
-    featured_count:      { type: 'number', label: '漂浮留言数量上限',    desc: '同时漂浮的留言气泡数量，推荐 8-12' },
-    featured_auto:       { type: 'bool',   label: '自动补齐漂浮留言',    desc: '手动精选数量不足时，自动从留言中随机补齐' },
-  };
+  function getSettingMeta() {
+    return {
+      site_title:          { type: 'text',   label: I18n.t('admin.setting_site_title'),         desc: I18n.t('admin.setting_site_title_desc') },
+      site_description:    { type: 'text',   label: I18n.t('admin.setting_site_desc'),          desc: I18n.t('admin.setting_site_desc_desc') },
+      show_history:        { type: 'bool',   label: I18n.t('admin.setting_show_history'),       desc: I18n.t('admin.setting_show_history_desc') },
+      allow_messages:      { type: 'bool',   label: I18n.t('admin.setting_allow_messages'),     desc: I18n.t('admin.setting_allow_messages_desc') },
+      require_contact:     { type: 'bool',   label: I18n.t('admin.setting_require_contact'),    desc: I18n.t('admin.setting_require_contact_desc') },
+      max_message_length:  { type: 'number', label: I18n.t('admin.setting_max_length'),         desc: I18n.t('admin.setting_max_length_desc') },
+      daily_limit:         { type: 'number', label: I18n.t('admin.setting_daily_limit'),        desc: I18n.t('admin.setting_daily_limit_desc') },
+      show_replies:        { type: 'bool',   label: I18n.t('admin.setting_show_replies'),       desc: I18n.t('admin.setting_show_replies_desc') },
+      show_pinned:         { type: 'bool',   label: I18n.t('admin.setting_show_pinned'),        desc: I18n.t('admin.setting_show_pinned_desc') },
+      show_featured:       { type: 'bool',   label: I18n.t('admin.setting_show_featured'),      desc: I18n.t('admin.setting_show_featured_desc') },
+      featured_count:      { type: 'number', label: I18n.t('admin.setting_featured_count'),     desc: I18n.t('admin.setting_featured_count_desc') },
+      featured_auto:       { type: 'bool',   label: I18n.t('admin.setting_featured_auto'),      desc: I18n.t('admin.setting_featured_auto_desc') },
+    };
+  }
 
   async function loadSettings() {
     const settingsPanel = document.getElementById('settings-panel');
     if (!settingsPanel) return;
-    settingsPanel.innerHTML = '<p class="loading">加载中…</p>';
+    settingsPanel.innerHTML = `<p class="loading">${I18n.t('admin.loading')}</p>`;
     try {
       const rows = await DB.adminGetSettings();
       settingsPanel.innerHTML = `<div class="settings-grid">${rows.map(row => renderSettingRow(row)).join('')}</div>`;
       bindSettingActions();
     } catch (e) {
-      settingsPanel.innerHTML = `<p class="empty">加载失败：${e.message}</p>`;
+      settingsPanel.innerHTML = `<p class="empty">${I18n.t('admin.load_fail')}: ${e.message}</p>`;
     }
   }
 
   function renderSettingRow(row) {
-    const meta = SETTING_META[row.key] ?? { type: 'text', label: row.key, desc: row.description ?? '' };
+    const meta = getSettingMeta()[row.key] ?? { type: 'text', label: row.key, desc: row.description ?? '' };
     const isBool   = meta.type === 'bool';
     const isText   = meta.type === 'text';
     const isTrue   = row.value === 'true';
@@ -356,17 +401,17 @@
       <div class="setting-control">
         ${isBool ? `
           <button class="toggle-btn ${isTrue ? 'on' : 'off'}" data-key="${row.key}" data-value="${row.value}">
-            ${isTrue ? '开启' : '关闭'}
+            ${isTrue ? I18n.t('admin.toggle_on') : I18n.t('admin.toggle_off')}
           </button>
         ` : isText ? `
           <div class="text-control">
             <input type="text" class="setting-text" data-key="${row.key}" value="${escapeAttr(row.value)}">
-            <button class="btn-save-text" data-key="${row.key}">保存</button>
+            <button class="btn-save-text" data-key="${row.key}">${I18n.t('admin.setting_save')}</button>
           </div>
         ` : `
           <div class="number-control">
             <input type="number" class="setting-number" data-key="${row.key}" value="${row.value}" min="0">
-            <button class="btn-save-num" data-key="${row.key}">保存</button>
+            <button class="btn-save-num" data-key="${row.key}">${I18n.t('admin.setting_save')}</button>
           </div>
         `}
       </div>
@@ -381,7 +426,7 @@
         btn.disabled = true;
         await DB.adminSaveSetting(btn.dataset.key, newVal);
         btn.dataset.value = newVal;
-        btn.textContent = newVal === 'true' ? '开启' : '关闭';
+        btn.textContent = newVal === 'true' ? I18n.t('admin.toggle_on') : I18n.t('admin.toggle_off');
         btn.className = `toggle-btn ${newVal === 'true' ? 'on' : 'off'}`;
         btn.disabled = false;
       });
@@ -392,8 +437,8 @@
         const input = btn.closest('.number-control').querySelector('.setting-number');
         btn.disabled = true;
         await DB.adminSaveSetting(btn.dataset.key, input.value);
-        btn.textContent = '✓ 已保存';
-        setTimeout(() => { btn.textContent = '保存'; btn.disabled = false; }, 2000);
+        btn.textContent = I18n.t('admin.setting_saved');
+        setTimeout(() => { btn.textContent = I18n.t('admin.setting_save'); btn.disabled = false; }, 2000);
       });
     });
 
@@ -402,8 +447,8 @@
         const input = btn.closest('.text-control').querySelector('.setting-text');
         btn.disabled = true;
         await DB.adminSaveSetting(btn.dataset.key, input.value.trim());
-        btn.textContent = '✓ 已保存';
-        setTimeout(() => { btn.textContent = '保存'; btn.disabled = false; }, 2000);
+        btn.textContent = I18n.t('admin.setting_saved');
+        setTimeout(() => { btn.textContent = I18n.t('admin.setting_save'); btn.disabled = false; }, 2000);
       });
     });
   }
@@ -432,7 +477,7 @@
 
     const confirmBtn = document.getElementById('export-confirm-btn');
     confirmBtn.disabled = true;
-    confirmBtn.textContent = '导出中…';
+    confirmBtn.textContent = I18n.t('admin.export_exporting');
 
     try {
       let messages = [];
@@ -457,7 +502,7 @@
       }
 
       if (!messages.length) {
-        alert('没有符合条件的数据');
+        alert(I18n.t('admin.export_empty'));
         return;
       }
 
@@ -466,15 +511,15 @@
       downloadCsv(csv, `mssk_messages_${dateStr()}${suffix}.csv`);
       exportPanel.style.display = 'none';
     } catch (e) {
-      alert('导出失败：' + e.message);
+      alert(I18n.t('admin.load_fail') + ': ' + e.message);
     } finally {
       confirmBtn.disabled = false;
-      confirmBtn.textContent = '确认导出';
+      confirmBtn.textContent = I18n.t('admin.export_confirm');
     }
   });
 
   function messagesToCsv(messages) {
-    const cols = ['ID', '用户ID', '用户备注', '内容', '图片链接', '联系方式', '发送时间', '已读', '已屏蔽', '屏蔽词拦截'];
+    const cols = ["ID", I18n.t('admin.csv_visitor_id'), I18n.t('admin.csv_note'), I18n.t('admin.csv_content'), I18n.t('admin.csv_image'), I18n.t('admin.csv_contact'), I18n.t('admin.csv_time'), I18n.t('admin.csv_read'), I18n.t('admin.csv_blocked'), I18n.t('admin.csv_word_blocked')];
     const escape = v => {
       if (v == null) return '';
       const s = String(v).replace(/"/g, '""');
@@ -488,9 +533,9 @@
       m.image_url ?? '',
       m.contact ?? '',
       new Date(m.created_at).toLocaleString('zh-CN'),
-      m.is_read ? '是' : '否',
-      m.is_blocked ? '是' : '否',
-      m.is_word_blocked ? '是' : '否',
+      m.is_read ? I18n.t('admin.csv_yes') : I18n.t('admin.csv_no'),
+      m.is_blocked ? I18n.t('admin.csv_yes') : I18n.t('admin.csv_no'),
+      m.is_word_blocked ? I18n.t('admin.csv_yes') : I18n.t('admin.csv_no'),
     ].map(escape).join(','));
     return '\uFEFF' + [cols.join(','), ...rows].join('\r\n');
   }
@@ -517,7 +562,7 @@
       document.getElementById('stat-unread').textContent = stats.unread;
       document.getElementById('stat-visitors').textContent = stats.visitors;
       // 未读角标
-      document.title = stats.unread > 0 ? `(${stats.unread}) 管理后台` : '管理后台';
+      document.title = stats.unread > 0 ? `(${stats.unread}) ${I18n.t('admin.title')}` : I18n.t('admin.title');
     } catch (e) { console.error(e); }
   }
 
@@ -529,7 +574,7 @@
       allMessages = await DB.adminGetAllMessages({ unreadOnly: showUnreadOnly, showBlocked, showWordBlocked });
       renderMessages();
     } catch (e) {
-      messageList.innerHTML = `<p class="empty">加载失败：${e.message}</p>`;
+      messageList.innerHTML = `<p class="empty">${I18n.t('admin.load_fail')}: ${e.message}</p>`;
     }
   }
 
@@ -545,7 +590,7 @@
     }
 
     if (!filtered.length) {
-      messageList.innerHTML = `<p class="empty">${searchKeyword ? '没有匹配的消息' : I18n.t('admin.no_messages')}</p>`;
+      messageList.innerHTML = `<p class="empty">${I18n.t('admin.no_messages')}</p>`;
       paginationEl.innerHTML = '';
       return;
     }
@@ -640,7 +685,7 @@
 
       const jumpBtn = document.createElement('button');
       jumpBtn.className = 'page-jump-btn';
-      jumpBtn.textContent = '跳转';
+      jumpBtn.textContent = I18n.t('admin.jump_btn');
 
       const doJump = () => {
         const val = parseInt(jumpInput.value);
@@ -704,10 +749,10 @@
           ${displayName}
           ${isBlocked ? `<span class="badge blocked">${I18n.t('admin.blocked_badge')}</span>` : ''}
           ${unreadCount > 0 ? `<span class="badge unread">${I18n.t('admin.unread_badge')} ${unreadCount}</span>` : ''}
-          <span class="msg-count">${totalCount} 条</span>
+          <span class="msg-count">${totalCount} ${I18n.t('admin.msg_count_unit')}</span>
         </div>
         <div class="visitor-actions" onclick="event.stopPropagation()">
-          ${nickname ? `<span class="visitor-actions-nickname" title="访客昵称">${escapeHtml(nickname)}</span>` : ''}
+          ${nickname ? `<span class="visitor-actions-nickname" title="${I18n.t('admin.visitor_nickname_label')}">${escapeHtml(nickname)}</span>` : ''}
           ${vid !== 'unknown' ? `
           <button class="btn-block" data-vid="${vid}" data-blocked="${isBlocked}">
             ${isBlocked ? I18n.t('admin.unblock_user') : I18n.t('admin.block_user')}
@@ -723,7 +768,7 @@
 
       ${state.open ? `
       <div class="group-detail">
-        ${bio ? `<p class="visitor-bio">签名：${escapeHtml(bio)}</p>` : ''}
+        ${bio ? `<p class="visitor-bio">${I18n.t('admin.visitor_bio_prefix')}${escapeHtml(bio)}</p>` : ''}
         ${vid !== 'unknown' ? `
         <div class="note-area">
           <input type="text" class="note-input" data-vid="${vid}" value="${escapeAttr(note)}"
@@ -746,30 +791,30 @@
     const isWordBlocked = m.is_word_blocked;
     return `
     <div class="message-item ${m.is_read ? '' : 'unread'} ${m.is_blocked ? 'msg-blocked' : ''} ${isWordBlocked ? 'msg-word-blocked' : ''}" data-msg-id="${m.id}">
-      ${m.is_blocked ? '<span class="blocked-badge">已屏蔽</span>' : ''}
-      ${isWordBlocked ? '<span class="word-blocked-badge">🚫 屏蔽词</span>' : ''}
+      ${m.is_blocked ? `<span class="blocked-badge">${I18n.t('admin.badge_blocked')}</span>` : ''}
+      ${isWordBlocked ? `<span class="word-blocked-badge">${I18n.t('admin.badge_word_blocked')}</span>` : ''}
       <p class="msg-content">${highlightText(m.content, searchKeyword)}</p>
-      ${m.image_url ? `<a href="${escapeHtml(m.image_url)}" target="_blank" class="msg-img-link">🖼 查看图片</a>` : ''}
+      ${m.image_url ? `<a href="${escapeHtml(m.image_url)}" target="_blank" class="msg-img-link">🖼 ${I18n.t('admin.image')}</a>` : ''}
       ${m.contact ? `<p class="msg-contact">📬 ${I18n.t('admin.contact')}：${highlightText(m.contact, searchKeyword)}</p>` : ''}
       <div class="msg-footer">
         <span class="msg-time">${formatTime(m.created_at)}</span>
         <div class="msg-actions">
-          ${hasReplies ? `<span class="badge replied">💬 已回复</span>` : ''}
+          ${hasReplies ? `<span class="badge replied">${I18n.t('admin.replied_badge')}</span>` : ''}
           ${!m.is_read ? `<button class="btn-read" data-msg-id="${m.id}">${I18n.t('admin.mark_read')}</button>` : ''}
           ${isWordBlocked
-            ? `<button class="btn-release" data-msg-id="${m.id}">✅ 放行</button>`
+            ? `<button class="btn-release" data-msg-id="${m.id}">${I18n.t('admin.release_word_blocked')}</button>`
             : `
           <button class="btn-block-msg ${m.is_blocked ? 'unblock' : ''}" data-msg-id="${m.id}" data-blocked="${m.is_blocked}">
-            ${m.is_blocked ? '解除屏蔽' : '屏蔽消息'}
+            ${m.is_blocked ? I18n.t('admin.unblock_msg') : I18n.t('admin.block_msg')}
           </button>
-          <button class="btn-featured ${m.is_featured ? 'on' : ''}" data-msg-id="${m.id}" data-featured="${!!m.is_featured}" title="加入漂浮留言墙">
-            ${m.is_featured ? '✨ 已精选' : '✨ 精选'}
+          <button class="btn-featured ${m.is_featured ? 'on' : ''}" data-msg-id="${m.id}" data-featured="${!!m.is_featured}" title="${I18n.t('admin.feature_btn')}">
+            ${m.is_featured ? I18n.t('admin.unfeature_btn') : I18n.t('admin.feature_btn')}
           </button>
-          <button class="btn-pinned ${m.is_pinned ? 'on' : ''}" data-msg-id="${m.id}" data-pinned="${!!m.is_pinned}" title="置顶消息">
-            ${m.is_pinned ? '📌 已置顶' : '📌 置顶'}
+          <button class="btn-pinned ${m.is_pinned ? 'on' : ''}" data-msg-id="${m.id}" data-pinned="${!!m.is_pinned}" title="${I18n.t('admin.pin_btn')}">
+            ${m.is_pinned ? I18n.t('admin.unpin_btn') : I18n.t('admin.pin_btn')}
           </button>`
           }
-          <button class="btn-reply-toggle" data-msg-id="${m.id}">💬 ${hasReplies ? '查看回复' : '回复'}</button>
+          <button class="btn-reply-toggle" data-msg-id="${m.id}">💬 ${hasReplies ? I18n.t('admin.reply_view_btn').replace('💬 ','') : I18n.t('admin.reply_btn').replace('💬 ','')}</button>
         </div>
       </div>
 
@@ -777,15 +822,15 @@
         <div class="reply-list" id="reply-list-${m.id}"></div>
         <div class="reply-input-row">
           <textarea class="reply-input" id="reply-input-${m.id}"
-            placeholder="输入回复内容…" rows="2"></textarea>
+            placeholder=I18n.t('admin.reply_placeholder') rows="2"></textarea>
           <div class="reply-send-col">
             ${m.contact?.includes('@') ? `
             <label class="reply-email-check">
-              <input type="checkbox" id="reply-email-${m.id}"> 发送邮件通知用户
+              <input type="checkbox" id="reply-email-${m.id}"> ${I18n.t('admin.reply_email_notify')}
             </label>` : ''}
             <button class="btn-send-reply" data-msg-id="${m.id}"
               data-contact="${escapeAttr(m.contact ?? '')}"
-              data-original="${escapeAttr(m.content)}">发送回复</button>
+              data-original="${escapeAttr(m.content)}">${I18n.t('admin.reply_send')}</button>
           </div>
         </div>
       </div>
@@ -796,7 +841,7 @@
     const el = document.getElementById(`reply-list-${msgId}`);
     if (!el) return;
     if (!replies.length) {
-      el.innerHTML = '<p class="empty" style="font-size:0.8rem;padding:4px 0;">暂无回复，发送第一条回复</p>';
+      el.innerHTML = `<p class="empty" style="font-size:0.8rem;padding:4px 0;">${I18n.t('admin.reply_empty')}</p>`;
       return;
     }
     el.innerHTML = replies.map(r => `
@@ -806,12 +851,12 @@
           <textarea class="reply-edit-input" id="reply-edit-${r.id}" style="display:none" rows="2">${escapeHtml(r.content)}</textarea>
         </div>
         <div class="reply-footer">
-          <span class="reply-time">${formatTime(r.created_at)}${r.updated_at ? ' (已编辑)' : ''}</span>
+          <span class="reply-time">${formatTime(r.created_at)}${r.updated_at ? ` ${I18n.t('admin.reply_edited_badge')}` : ''}</span>
           <div class="reply-actions">
-            <button class="btn-edit-reply" data-reply-id="${r.id}" data-msg-id="${msgId}">编辑</button>
-            <button class="btn-save-reply" data-reply-id="${r.id}" data-msg-id="${msgId}" style="display:none">保存</button>
-            <button class="btn-cancel-reply" data-reply-id="${r.id}" style="display:none">取消</button>
-            <button class="btn-delete-reply" data-reply-id="${r.id}" data-msg-id="${msgId}">删除</button>
+            <button class="btn-edit-reply" data-reply-id="${r.id}" data-msg-id="${msgId}">${I18n.t('admin.reply_edit')}</button>
+            <button class="btn-save-reply" data-reply-id="${r.id}" data-msg-id="${msgId}" style="display:none">${I18n.t('admin.reply_save')}</button>
+            <button class="btn-cancel-reply" data-reply-id="${r.id}" style="display:none">${I18n.t('admin.reply_cancel')}</button>
+            <button class="btn-delete-reply" data-reply-id="${r.id}" data-msg-id="${msgId}">${I18n.t('admin.reply_delete')}</button>
           </div>
         </div>
       </div>
@@ -853,7 +898,7 @@
 
     el.querySelectorAll('.btn-delete-reply').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (!confirm('确定删除这条回复？')) return;
+        if (!confirm(I18n.t('admin.reply_delete_confirm'))) return;
         await DB.adminDeleteReply(btn.dataset.replyId);
         await loadReplies(btn.dataset.msgId);
       });
@@ -862,7 +907,7 @@
 
   async function loadReplies(msgId) {
     const el = document.getElementById(`reply-list-${msgId}`);
-    if (el) el.innerHTML = '<p class="loading" style="font-size:0.8rem;">加载中…</p>';
+    if (el) el.innerHTML = `<p class="loading" style="font-size:0.8rem;">${I18n.t('admin.loading')}</p>`;
     const replies = await DB.adminGetReplies(msgId);
     renderReplyList(msgId, replies);
   }
@@ -894,7 +939,7 @@
       btn.addEventListener('click', async e => {
         e.stopPropagation();
         btn.disabled = true;
-        btn.textContent = '放行中…';
+        btn.textContent = I18n.t('admin.releasing');
         await DB.adminReleaseWordBlocked(btn.dataset.msgId);
         await fetchAndRender();
       });
@@ -910,7 +955,7 @@
         const msg = allMessages.find(m => m.id === btn.dataset.msgId);
         if (msg) msg.is_pinned = !isPinned;
         btn.dataset.pinned = String(!isPinned);
-        btn.textContent = !isPinned ? '📌 已置顶' : '📌 置顶';
+        btn.textContent = !isPinned ? I18n.t('admin.unpin_btn') : I18n.t('admin.pin_btn');
         btn.classList.toggle('on', !isPinned);
         btn.disabled = false;
       });
@@ -926,7 +971,7 @@
         const msg = allMessages.find(m => m.id === btn.dataset.msgId);
         if (msg) msg.is_featured = !isFeatured;
         btn.dataset.featured = String(!isFeatured);
-        btn.textContent = !isFeatured ? '✨ 已精选' : '✨ 精选';
+        btn.textContent = !isFeatured ? I18n.t('admin.unfeature_btn') : I18n.t('admin.feature_btn');
         btn.classList.toggle('on', !isFeatured);
         btn.disabled = false;
       });
@@ -940,7 +985,7 @@
         const area = document.getElementById(`reply-area-${msgId}`);
         const isHidden = area.style.display === 'none';
         area.style.display = isHidden ? 'block' : 'none';
-        btn.textContent = isHidden ? '💬 收起' : '💬 回复';
+        btn.textContent = isHidden ? I18n.t('admin.reply_view_btn') : I18n.t('admin.reply_btn');
         if (isHidden) loadReplies(msgId);
       });
     });
@@ -955,14 +1000,14 @@
         if (!content) return;
         const sendEmail = document.getElementById(`reply-email-${msgId}`)?.checked ?? false;
         btn.disabled = true;
-        btn.textContent = '发送中…';
+        btn.textContent = I18n.t('admin.reply_sending');
         await DB.adminAddReply(msgId, content, btn.dataset.contact, btn.dataset.original, sendEmail);
         input.value = '';
         if (document.getElementById(`reply-email-${msgId}`)) {
           document.getElementById(`reply-email-${msgId}`).checked = false;
         }
         btn.disabled = false;
-        btn.textContent = '发送回复';
+        btn.textContent = I18n.t('admin.reply_send');
         const msg = allMessages.find(m => m.id === msgId);
         if (msg) { msg.is_read = true; if (!msg.replies) msg.replies = [{}]; }
         await loadReplies(msgId);
@@ -1016,8 +1061,8 @@
         allMessages.forEach(m => {
           if (m.visitor_id === btn.dataset.vid && m.visitors) m.visitors.note = note;
         });
-        btn.textContent = '✓ 已保存';
-        setTimeout(() => btn.textContent = I18n.t('admin.save_note'), 2000);
+        btn.textContent = I18n.t('admin.note_saved');
+        setTimeout(() => btn.textContent = I18n.t('admin.note_save'), 2000);
       });
     });
   }
@@ -1034,27 +1079,27 @@
     if (isCurrentlyBlocked) {
       dialog.innerHTML = `
         <div class="confirm-box">
-          <p class="confirm-title">解除屏蔽</p>
-          <p class="confirm-desc">解除后该用户可以重新发送消息。</p>
+          <p class="confirm-title">${I18n.t('admin.unblock_user')}</p>
+          <p class="confirm-desc">${I18n.t('admin.unblock_user_desc')}</p>
           <label class="confirm-check">
-            <input type="checkbox" id="block-msgs-check" checked> 同时解除该用户所有消息屏蔽
+            <input type="checkbox" id="block-msgs-check" checked> ${I18n.t('admin.unblock_msgs_also')}
           </label>
           <div class="confirm-actions">
-            <button id="confirm-cancel">取消</button>
-            <button id="confirm-ok">确认解除</button>
+            <button id="confirm-cancel">${I18n.t('admin.reply_cancel')}</button>
+            <button id="confirm-ok">${I18n.t('admin.unblock_confirm')}</button>
           </div>
         </div>`;
     } else {
       dialog.innerHTML = `
         <div class="confirm-box">
-          <p class="confirm-title">屏蔽此用户</p>
-          <p class="confirm-desc">屏蔽后该用户无法再发送消息。</p>
+          <p class="confirm-title">${I18n.t('admin.block_user')}</p>
+          <p class="confirm-desc">${I18n.t('admin.block_user_desc')}</p>
           <label class="confirm-check">
-            <input type="checkbox" id="block-msgs-check"> 同时屏蔽该用户所有历史消息
+            <input type="checkbox" id="block-msgs-check"> ${I18n.t('admin.block_msgs_also')}
           </label>
           <div class="confirm-actions">
-            <button id="confirm-cancel">取消</button>
-            <button id="confirm-ok" class="danger">确认屏蔽</button>
+            <button id="confirm-cancel">${I18n.t('admin.reply_cancel')}</button>
+            <button id="confirm-ok" class="danger">${I18n.t('admin.block_confirm')}</button>
           </div>
         </div>`;
     }

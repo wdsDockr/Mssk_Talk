@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>管理后台</title>
+  <title>Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./css/admin.css">
@@ -29,10 +29,12 @@
   <!-- 主界面 -->
   <div id="admin-screen">
     <div class="topbar">
-      <h1 data-i18n="admin.login_title">管理后台</h1>
+      <h1 data-i18n="admin.title">管理后台</h1>
       <div style="display:flex;align-items:center;gap:8px;">
         <button class="scheme-toggle" style="background:none;border:1px solid var(--border);border-radius:12px;cursor:pointer;font-size:0.78rem;padding:4px 10px;color:var(--text-secondary);font-family:inherit;" title="切换配色方案">🔵 冷色</button>
         <button class="theme-toggle" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:4px;" title="切换主题">🌙</button>
+        <button id="lang-toggle-admin" style="background:none;border:none;cursor:pointer;font-size:0.85rem;padding:4px 6px;color:var(--text-secondary);font-family:inherit;" title="Language">🌐</button>
+        <div id="lang-menu-admin" class="lang-menu" style="display:none"></div>
         <button id="logout-btn" data-i18n="admin.logout">退出</button>
       </div>
     </div>
@@ -57,77 +59,85 @@
 
       <!-- 设置面板 -->
       <div class="section-title section-toggle" id="settings-toggle">
-        <span>系统设置</span>
+        <span data-i18n="admin.section_settings">系统设置</span>
         <span class="toggle-arrow" id="settings-arrow">▸</span>
       </div>
       <div id="settings-panel" class="settings-panel" style="display:none">
-        <p class="loading">加载中…</p>
+        <p class="loading" data-i18n="admin.loading">加载中…</p>
       </div>
 
       <!-- 访客统计 -->
       <div class="section-title section-toggle" id="vstats-toggle">
-        <span>访客统计</span>
+        <span data-i18n="admin.section_vstats">访客统计</span>
         <span class="toggle-arrow" id="vstats-arrow">▸</span>
       </div>
       <div id="vstats-panel" class="vstats-panel" style="display:none">
-        <p class="loading">加载中…</p>
+        <p class="loading" data-i18n="admin.loading">加载中…</p>
       </div>
 
       <!-- 精选管理 -->
       <div class="section-title section-toggle" id="featured-mgr-toggle" style="margin-top:16px">
-        <span>精选管理</span>
+        <span data-i18n="admin.section_featured">精选管理</span>
         <span class="toggle-arrow" id="featured-mgr-arrow">▸</span>
       </div>
       <div id="featured-mgr-panel" class="featured-mgr-panel" style="display:none">
         <div id="featured-mgr-list">
-          <p class="loading">加载中…</p>
+          <p class="loading" data-i18n="admin.loading">加载中…</p>
         </div>
       </div>
 
       <!-- 屏蔽词管理 -->
       <div class="section-title section-toggle" id="bwords-toggle" style="margin-top:16px">
-        <span>屏蔽词管理</span>
+        <span data-i18n="admin.section_bwords">屏蔽词管理</span>
         <span class="toggle-arrow" id="bwords-arrow">▸</span>
       </div>
       <div id="bwords-panel" class="bwords-panel" style="display:none">
         <div class="bwords-input-row">
-          <input type="text" id="bword-input" placeholder="输入屏蔽词，回车添加" class="bword-input">
-          <button id="bword-add-btn" class="bword-add-btn">添加</button>
+          <input type="text" id="bword-input"
+            data-i18n-attr="placeholder" data-i18n="admin.bword_placeholder"
+            placeholder="输入屏蔽词，回车添加" class="bword-input">
+          <button id="bword-add-btn" class="bword-add-btn" data-i18n="admin.bword_add">添加</button>
         </div>
         <div id="bwords-list" class="bwords-list">
-          <p class="loading">加载中…</p>
+          <p class="loading" data-i18n="admin.loading">加载中…</p>
         </div>
       </div>
 
-      <div class="section-title" style="margin-top:28px">消息管理</div>
+      <div class="section-title" style="margin-top:28px" data-i18n="admin.section_messages">消息管理</div>
 
-      <!-- 工具栏：过滤器 + 搜索 + 导出 -->
+      <!-- 工具栏 -->
       <div class="toolbar">
         <div class="filters">
-          <button class="filter-btn active" id="filter-all" data-i18n="admin.all_messages">全部消息</button>
-          <button class="filter-btn" id="filter-unread" data-i18n="admin.unread_only">仅未读</button>
-          <button class="filter-btn" id="filter-blocked">显示已屏蔽</button>
-          <button class="filter-btn" id="filter-word-blocked">屏蔽词拦截</button>
+          <button class="filter-btn active" id="filter-all" data-i18n="admin.filter_all">全部消息</button>
+          <button class="filter-btn" id="filter-unread" data-i18n="admin.filter_unread">仅未读</button>
+          <button class="filter-btn" id="filter-blocked" data-i18n="admin.filter_blocked">显示已屏蔽</button>
+          <button class="filter-btn" id="filter-word-blocked" data-i18n="admin.filter_word_blocked">屏蔽词拦截</button>
         </div>
-        <input type="text" id="search-input" class="search-input" placeholder="搜索消息、联系方式、备注…">
+        <input type="text" id="search-input" class="search-input"
+          data-i18n-attr="placeholder" data-i18n="admin.search_placeholder"
+          placeholder="搜索消息、联系方式、备注…">
         <div style="position:relative;display:inline-block;">
-          <button id="export-btn" class="export-btn">导出 CSV ▾</button>
+          <button id="export-btn" class="export-btn" data-i18n="admin.export_btn">导出 CSV ▾</button>
           <div id="export-panel" class="export-panel" style="display:none">
-            <p class="export-panel-title">导出范围</p>
+            <p class="export-panel-title" data-i18n="admin.export_scope_title">导出范围</p>
             <label class="export-radio">
-              <input type="radio" name="export-scope" value="all" checked> 全部消息
+              <input type="radio" name="export-scope" value="all" checked>
+              <span data-i18n="admin.export_scope_all">全部消息</span>
             </label>
             <label class="export-radio">
-              <input type="radio" name="export-scope" value="current"> 当前视图（含搜索/过滤结果）
+              <input type="radio" name="export-scope" value="current">
+              <span data-i18n="admin.export_scope_current">当前视图（含搜索/过滤结果）</span>
             </label>
             <div class="export-divider"></div>
             <label class="export-check">
-              <input type="checkbox" id="export-include-blocked"> 包含手动屏蔽的消息
+              <input type="checkbox" id="export-include-blocked">
+              <span data-i18n="admin.export_include_blocked">包含手动屏蔽的消息</span>
             </label>
             <label class="export-check">
-              <input type="checkbox" id="export-include-word-blocked"> 包含屏蔽词拦截的消息
+              <input type="checkbox" id="export-include-word-blocked">
+              <span data-i18n="admin.export_include_word_blocked">包含屏蔽词拦截的消息</span>
             </label>
-            <button id="export-confirm-btn" class="export-confirm-btn">确认导出</button>
+            <button id="export-confirm-btn" class="export-confirm-btn" data-i18n="admin.export_confirm">确认导出</button>
           </div>
         </div>
       </div>
