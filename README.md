@@ -34,6 +34,7 @@
 - **Truly anonymous** — visitors are identified by a UUID stored in `localStorage`, no account required
 - **Silent moderation** — blocked words intercept messages without alerting the sender; admin reviews and decides
 - **Floating message wall** — featured messages drift as bubbles in the page background, fully configurable
+- **Multilingual** — built-in Chinese, English, Korean; adding a new language takes one JSON file
 - **Zero infrastructure** — Cloudflare Pages Functions handles all server logic; Supabase is the only external service
 
 ---
@@ -46,7 +47,7 @@ Create a new project and run [`schema.sql`](./SQL/schema.sql) in the SQL Editor.
 
 **2. Deploy to Cloudflare Pages**
 
-Fork this repo, connect it to Cloudflare Pages, then add these environment variables:
+Fork this repo, connect it to Cloudflare Pages, then add these environment variables (copy [`.env.example`](./.env.example) as reference):
 
 | Variable | Description |
 |----------|-------------|
@@ -81,7 +82,7 @@ Visit your Pages URL to use the message board. Go to `/admin` to log in with you
 - View message history and admin replies
 - Pinned messages section (shown when enabled by admin)
 - Floating message wall background (bubble animation, enabled by admin)
-- Chinese / English language toggle
+- Language switcher menu — Chinese, English, Korean built-in
 - Light / dark theme toggle
 
 </details>
@@ -101,6 +102,7 @@ Visit your Pages URL to use the message board. Go to `/admin` to log in with you
 - System settings: site title, description, toggles, numeric limits — all live
 - Blocked word management — add/remove words, release intercepted messages
 - Visitor stats — total count, today's new visitors, 7-day message volume chart
+- Language switcher — admin panel is fully internationalized
 - Warm / cool color scheme toggle
 
 </details>
@@ -124,6 +126,7 @@ Visit your Pages URL to use the message board. Go to `/admin` to log in with you
 ├── index.html              # User-facing page
 ├── admin.html              # Admin panel
 ├── schema.sql              # Database initialization script
+├── .env.example            # Environment variable reference
 ├── css/
 │   ├── main.css            # User-facing styles
 │   └── admin.css           # Admin panel styles
@@ -137,8 +140,9 @@ Visit your Pages URL to use the message board. Go to `/admin` to log in with you
 │   ├── main.js             # User-facing logic
 │   └── admin.js            # Admin panel logic
 ├── i18n/
-│   ├── zh.json             # Chinese strings
-│   └── en.json             # English strings
+│   ├── zh.json             # Chinese (base language)
+│   ├── en.json             # English
+│   └── kr.json             # Korean
 └── functions/
     └── api/
         ├── config.js       # Delivers settings, featured and pinned data
@@ -165,7 +169,15 @@ Five tables, all with RLS enabled. Run [`schema.sql`](./SQL/schema.sql) to initi
 
 ## Contributing
 
-Issues and pull requests are welcome. If you find a bug or have a feature idea, feel free to open an issue.
+Contributions are welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+If you find a bug or have a feature idea, please [open an issue](https://github.com/MaoShiSanKe/Mssk_Talk/issues).
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md).
 
 ---
 

@@ -34,6 +34,7 @@
 - **真正匿名** — 访客通过 `localStorage` 中的 UUID 识别，无需注册账号
 - **静默拦截** — 屏蔽词命中后消息正常写入但不通知发送者，由管理员审核决定是否放行
 - **漂浮留言墙** — 精选留言以气泡形式在页面背景漂移，可完全自定义
+- **多语言支持** — 内置中文、英文、韩文，新增语言只需一个 JSON 文件
 - **零基础设施** — Cloudflare Pages Functions 处理所有服务端逻辑，Supabase 是唯一外部依赖
 
 ---
@@ -46,7 +47,7 @@
 
 **2. 部署到 Cloudflare Pages**
 
-Fork 本仓库并连接到 Cloudflare Pages，添加以下环境变量：
+Fork 本仓库并连接到 Cloudflare Pages，参考 [`.env.example`](./.env.example) 添加以下环境变量：
 
 | 变量名 | 说明 |
 |--------|------|
@@ -81,7 +82,7 @@ Fork 本仓库并连接到 Cloudflare Pages，添加以下环境变量：
 - 查看历史留言及管理员回复
 - 置顶消息入口（管理员开启后显示）
 - 漂浮留言墙背景（气泡动画，管理员开启后显示）
-- 中英双语切换
+- 语言切换菜单，内置中文、英文、韩文
 - 亮色 / 暗色主题切换
 
 </details>
@@ -101,6 +102,7 @@ Fork 本仓库并连接到 Cloudflare Pages，添加以下环境变量：
 - 系统设置：留言板标题/副标题、功能开关、数值限制，实时生效
 - 屏蔽词管理：添加/删除屏蔽词，对被拦截消息放行或删除
 - 访客统计：总访客数、今日新增、近 7 天消息量柱状图
+- 管理端完整国际化，语言切换菜单
 - 暖色 / 冷色配色方案切换
 
 </details>
@@ -124,6 +126,7 @@ Fork 本仓库并连接到 Cloudflare Pages，添加以下环境变量：
 ├── index.html              # 用户端
 ├── admin.html              # 管理端
 ├── schema.sql              # 数据库初始化脚本
+├── .env.example            # 环境变量参考
 ├── css/
 │   ├── main.css            # 用户端样式
 │   └── admin.css           # 管理端样式
@@ -137,8 +140,9 @@ Fork 本仓库并连接到 Cloudflare Pages，添加以下环境变量：
 │   ├── main.js             # 用户端逻辑
 │   └── admin.js            # 管理端逻辑
 ├── i18n/
-│   ├── zh.json             # 中文语言包
-│   └── en.json             # 英文语言包
+│   ├── zh.json             # 中文（基准语言包）
+│   ├── en.json             # 英文
+│   └── kr.json             # 韩文
 └── functions/
     └── api/
         ├── config.js       # 下发配置和精选/置顶数据
@@ -165,7 +169,13 @@ Fork 本仓库并连接到 Cloudflare Pages，添加以下环境变量：
 
 ## 参与贡献
 
-欢迎提 Issue 和 Pull Request。如果发现 bug 或有功能建议，随时开 issue。
+欢迎提 Issue 和 Pull Request，详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+
+---
+
+## 更新日志
+
+见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ---
 
