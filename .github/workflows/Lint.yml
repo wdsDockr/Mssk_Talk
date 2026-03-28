@@ -1,0 +1,159 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── 1. JavaScript 语法检查 ──────────────────────────────────
+  js-syntax:
+    name: JS Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check JS syntax (Node built-in)
+        run: |
+          echo "Checking JS files..."
+          find . -name "*.js" \
+            -not -path "./node_modules/*" \
+            -not -path "./.github/*" \
+            | while read file; do
+              node --check "$file" && echo "  ✓ $file" || { echo "  ✗ $file"; exit 1; }
+            done
+          echo "All JS files passed syntax check."
+
+  # ── 2. JSON 格式验证 ────────────────────────────────────────
+  json-valid:
+    name: JSON Valid
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON files
+        run: |
+          echo "Validating JSON files..."
+          find . -name "*.json" \
+            -not -path "./node_modules/*" \
+            | while read file; do
+              node -e "JSON.parse(require('fs').readFileSync('$file','utf8'))" \
+                && echo "  ✓ $file" \
+                || { echo "  ✗ $file — invalid JSON"; exit 1; }
+            done
+          echo "All JSON files are valid."
+
+  # ── 3. i18n 完整性检查 ──────────────────────────────────────
+  i18n-coverage:
+    name: i18n Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check translation coverage
+        run: |
+          node - << 'EOF'
+          const fs = require('fs');
+          const path = require('path');
+
+          const i18nDir = './i18n';
+          const baselang = 'zh';
+
+          function flattenKeys(obj, prefix = '') {
+            return Object.entries(obj).flatMap(([k, v]) => {
+              const full = prefix ? `${prefix}.${k}` : k;
+              return typeof v === 'object' && v !== null
+                ? flattenKeys(v, full)
+                : [full];
+            });
+          }
+
+          const basePath = path.join(i18nDir, `${baselang}.json`);
+          const base = JSON.parse(fs.readFileSync(basePath, 'utf8'));
+          const baseKeys = new Set(flattenKeys(base));
+
+          const files = fs.readdirSync(i18nDir)
+            .filter(f => f.endsWith('.json') && f !== `${baselang}.json`);
+
+          let hasGaps = false;
+
+          for (const file of files) {
+            const lang = file.replace('.json', '');
+            const target = JSON.parse(
+              fs.readFileSync(path.join(i18nDir, file), 'utf8')
+            );
+            const targetKeys = new Set(flattenKeys(target));
+
+            const missing = [...baseKeys].filter(k => !targetKeys.has(k));
+            const extra   = [...targetKeys].filter(k => !baseKeys.has(k));
+
+            if (missing.length === 0 && extra.length === 0) {
+              console.log(`  ✓ ${file} — complete (${targetKeys.size} keys)`);
+            } else {
+              if (missing.length > 0) {
+                console.log(`  ⚠ ${file} — ${missing.length} missing key(s):`);
+                missing.forEach(k => console.log(`      - ${k}`));
+                hasGaps = true;
+              }
+              if (extra.length > 0) {
+                console.log(`  ⚠ ${file} — ${extra.length} extra key(s) not in base:`);
+                extra.forEach(k => console.log(`      + ${k}`));
+              }
+            }
+          }
+
+          if (hasGaps) {
+            console.log('\nMissing keys will fall back to Chinese at runtime.');
+            console.log('This is a warning, not a failure — the build will still pass.');
+          }
+          EOF
+
+  # ── 4. HTML 基础检查 ────────────────────────────────────────
+  html-check:
+    name: HTML Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for unmatched data-i18n without I18n.t in JS
+        run: |
+          node - << 'EOF'
+          const fs = require('fs');
+
+          // 提取 HTML 中所有 data-i18n 用到的 key
+          const htmlFiles = ['index.html', 'admin.html'];
+          const htmlKeys = new Set();
+          for (const file of htmlFiles) {
+            if (!fs.existsSync(file)) continue;
+            const content = fs.readFileSync(file, 'utf8');
+            const matches = content.matchAll(/data-i18n="([^"]+)"/g);
+            for (const m of matches) htmlKeys.add(m[1]);
+          }
+
+          // 提取 zh.json 中所有的 key
+          function flattenKeys(obj, prefix = '') {
+            return Object.entries(obj).flatMap(([k, v]) => {
+              const full = prefix ? `${prefix}.${k}` : k;
+              return typeof v === 'object' && v !== null
+                ? flattenKeys(v, full)
+                : [full];
+            });
+          }
+          const zh = JSON.parse(fs.readFileSync('./i18n/zh.json', 'utf8'));
+          const definedKeys = new Set(flattenKeys(zh));
+
+          // 检查 HTML 里用的 key 是否都在语言包里定义了
+          let missing = [];
+          for (const key of htmlKeys) {
+            if (!definedKeys.has(key)) missing.push(key);
+          }
+
+          if (missing.length > 0) {
+            console.error('These data-i18n keys are used in HTML but not defined in zh.json:');
+            missing.forEach(k => console.error(`  - ${k}`));
+            process.exit(1);
+          } else {
+            console.log(`✓ All ${htmlKeys.size} data-i18n keys are defined in zh.json`);
+          }
+          EOF
