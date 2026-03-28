@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question or discuss ideas
+    url: https://github.com/MaoShiSanKe/Mssk_Talk/discussions
+    about: For general questions, deployment help, or feature discussions — use Discussions instead of Issues.
