@@ -95,6 +95,7 @@ CREATE POLICY "replies_select" ON replies
 INSERT INTO settings (key, value, description) VALUES
   ('site_title',         '留言给我',                                   '留言板标题，显示在用户端顶部'),
   ('site_description',   '你的消息会以匿名方式送达，联系方式完全可选。',  '留言板副标题'),
+  ('webhook_url',        '',      'Webhook 通知地址，收到新留言时 POST，留空禁用'),
   ('show_history',       'false', '是否在用户端显示历史记录入口'),
   ('allow_messages',     'true',  '是否允许用户发送消息'),
   ('require_contact',    'false', '是否强制填写联系方式'),

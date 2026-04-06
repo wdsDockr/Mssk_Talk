@@ -166,6 +166,8 @@
     "setting_featured_count": "Bubble count",
     "setting_featured_count_desc": "Max floating bubbles shown, recommended 8-12",
     "setting_featured_auto": "Auto-fill bubbles",
-    "setting_featured_auto_desc": "Auto-supplement from messages when featured count is low"
+    "setting_featured_auto_desc": "Auto-supplement from messages when featured count is low",
+    "setting_webhook_url": "Webhook URL",
+    "setting_webhook_url_desc": "POST new message events to this URL; leave empty to disable"
   }
 }

@@ -360,6 +360,7 @@
     return {
       site_title:          { type: 'text',   label: I18n.t('admin.setting_site_title'),         desc: I18n.t('admin.setting_site_title_desc') },
       site_description:    { type: 'text',   label: I18n.t('admin.setting_site_desc'),          desc: I18n.t('admin.setting_site_desc_desc') },
+      webhook_url:         { type: 'text',   label: I18n.t('admin.setting_webhook_url'),        desc: I18n.t('admin.setting_webhook_url_desc') },
       show_history:        { type: 'bool',   label: I18n.t('admin.setting_show_history'),       desc: I18n.t('admin.setting_show_history_desc') },
       allow_messages:      { type: 'bool',   label: I18n.t('admin.setting_allow_messages'),     desc: I18n.t('admin.setting_allow_messages_desc') },
       require_contact:     { type: 'bool',   label: I18n.t('admin.setting_require_contact'),    desc: I18n.t('admin.setting_require_contact_desc') },

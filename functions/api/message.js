@@ -4,7 +4,8 @@
 //   2. IP 频率限制（每IP每分钟最多10条）
 //   3. 服务端屏蔽检查
 //   4. 每日限制检查
-//   5. 新消息通知（TG Bot / Resend 邮件，可选）
+//   5. 屏蔽词检测
+//   6. 新消息通知（TG Bot / Resend 邮件 / Webhook，可选）
 //
 // 必填环境变量：
 //   SUPABASE_URL、SUPABASE_SECRET_KEY
@@ -15,6 +16,7 @@
 //   NOTIFY_RESEND_KEY    Resend API Key（https://resend.com）
 //   NOTIFY_EMAIL_TO      收件地址
 //   NOTIFY_EMAIL_FROM    发件地址（需在 Resend 后台验证域名，如 notify@yourdomain.com）
+//   webhook_url          在管理后台设置，留空禁用
 
 const RATE_LIMIT = 10;
 const RATE_WINDOW = 60_000;
@@ -139,12 +141,23 @@ export async function onRequestPost(context) {
 
     // ── 8. 发送通知（仅正常消息通知，屏蔽词消息不通知）────────
     if (!isWordBlocked) {
+      // 读取 webhook_url 设置（和屏蔽词查询复用同一个 headers）
+      let webhookUrl = '';
+      try {
+        const whRes = await fetch(
+          `${supabaseUrl}/rest/v1/settings?key=eq.webhook_url&select=value`,
+          { headers }
+        );
+        const whData = await whRes.json();
+        webhookUrl = whData[0]?.value?.trim() || '';
+      } catch { /* 读取失败不影响消息发送 */ }
+
       context.waitUntil(sendNotifications(env, {
         content: content.trim(),
         contact: contact || null,
         imageUrl: imageUrl || null,
         visitorId,
-      }));
+      }, webhookUrl));
     }
 
     return json({ ok: true });
@@ -154,13 +167,16 @@ export async function onRequestPost(context) {
 }
 
 // ── 通知调度 ────────────────────────────────────────────────────
-async function sendNotifications(env, msg) {
+async function sendNotifications(env, msg, webhookUrl = '') {
   const tasks = [];
   if (env.NOTIFY_TG_TOKEN && env.NOTIFY_TG_CHAT_ID) {
     tasks.push(notifyTelegram(env, msg));
   }
   if (env.NOTIFY_RESEND_KEY && env.NOTIFY_EMAIL_TO && env.NOTIFY_EMAIL_FROM) {
     tasks.push(notifyEmail(env, msg));
+  }
+  if (webhookUrl) {
+    tasks.push(notifyWebhook(webhookUrl, msg));
   }
   // 并行发送，互不影响
   await Promise.allSettled(tasks);
@@ -220,6 +236,24 @@ async function notifyEmail(env, { content, contact, imageUrl, visitorId }) {
       to: env.NOTIFY_EMAIL_TO,
       subject: '📬 你有新留言',
       html,
+    }),
+  });
+}
+
+// ── Webhook 通知 ─────────────────────────────────────────────────
+// POST to operator-configured URL with a standard JSON payload.
+// Failures are silently ignored — the message submission is not affected.
+async function notifyWebhook(url, { content, contact, imageUrl, visitorId }) {
+  await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      event: 'new_message',
+      timestamp: new Date().toISOString(),
+      visitor_id: visitorId.slice(0, 8), // short ID only, preserves anonymity
+      content,
+      contact: contact || null,
+      image_url: imageUrl || null,
     }),
   });
 }
